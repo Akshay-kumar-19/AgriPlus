@@ -1,0 +1,12 @@
+boron
+calcium
+Healthy
+iron
+Leaf_rust
+magnesium
+manganese
+mite
+nitrogen
+Phoma
+Phosphorus
+potassium
