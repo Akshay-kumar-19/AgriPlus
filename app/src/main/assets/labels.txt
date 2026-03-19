@@ -1,12 +1,12 @@
 boron
 calcium
-Healthy
+healthy
 iron
-Leaf_rust
+leaf_rust
 magnesium
 manganese
 mite
 nitrogen
-Phoma
-Phosphorus
+phoma
+phosphorus
 potassium
