@@ -2,23 +2,23 @@ package com.example.agriplus.ml
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Color
 import org.tensorflow.lite.Interpreter
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 
 class LeafClassifier(context: Context) {
 
-    private var interpreter: Interpreter
-    private val imageSize = 224
+    private val interpreter: Interpreter
+    private val imageSize = 300   // 🔥 FIXED (was 224)
 
     init {
         interpreter = Interpreter(loadModelFile(context))
     }
 
-    private fun loadModelFile(context: Context): MappedByteBuffer {
+    private fun loadModelFile(context: Context): ByteBuffer {
 
         val fileDescriptor = context.assets.openFd("model.tflite")
         val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
@@ -39,8 +39,7 @@ class LeafClassifier(context: Context) {
 
     fun classify(bitmap: Bitmap, labels: List<String>): String {
 
-        val imageSize = 224
-
+        // 🔥 Resize to correct size (300x300)
         val resized = Bitmap.createScaledBitmap(bitmap, imageSize, imageSize, true)
 
         val byteBuffer =
@@ -54,10 +53,10 @@ class LeafClassifier(context: Context) {
 
         for (pixel in pixels) {
 
-            // 🔥 IMPORTANT NORMALIZATION FIX
-            val r = ((pixel shr 16 and 0xFF) - 127.5f) / 127.5f
-            val g = ((pixel shr 8 and 0xFF) - 127.5f) / 127.5f
-            val b = ((pixel and 0xFF) - 127.5f) / 127.5f
+            // 🔥 Azure style (0–255 float, no normalization)
+            val r = (pixel shr 16 and 0xFF).toFloat()
+            val g = (pixel shr 8 and 0xFF).toFloat()
+            val b = (pixel and 0xFF).toFloat()
 
             byteBuffer.putFloat(r)
             byteBuffer.putFloat(g)
@@ -80,6 +79,6 @@ class LeafClassifier(context: Context) {
             }
         }
 
-        return labels[maxIndex]
+        return labels.getOrElse(maxIndex) { "Unknown" }
     }
 }

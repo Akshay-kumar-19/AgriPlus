@@ -1,10 +1,8 @@
 package com.example.agriplus.screens
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
-import android.graphics.ImageDecoder
-import android.os.Build
-import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -18,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -28,7 +27,6 @@ import com.example.agriplus.R
 import com.example.agriplus.ml.LeafClassifier
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.firebase.auth.FirebaseAuth
-import androidx.compose.ui.graphics.asImageBitmap
 
 @Composable
 fun HomeScreen(navController: NavController) {
@@ -39,41 +37,35 @@ fun HomeScreen(navController: NavController) {
     val labels = remember { classifier.loadLabels(context) }
 
     val account = GoogleSignIn.getLastSignedInAccount(context)
-
     val username = account?.displayName ?: "User"
     val profileImage = account?.photoUrl
 
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var resultText by remember { mutableStateOf("") }
 
-    /* ---------- Gallery ---------- */
+    /* ---------------- GALLERY ---------------- */
 
     val galleryLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.GetContent()
-        ) { uri ->
-
-            imageUri = uri
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
 
             uri?.let {
-                bitmap = if (Build.VERSION.SDK_INT >= 28) {
-                    val source = ImageDecoder.createSource(context.contentResolver, it)
-                    ImageDecoder.decodeBitmap(source)
-                } else {
-                    MediaStore.Images.Media.getBitmap(context.contentResolver, it)
-                }
+                val inputStream = context.contentResolver.openInputStream(it)
+                val tempBitmap = BitmapFactory.decodeStream(inputStream)
+
+                // 🔥 FIX: Convert to ARGB_8888
+                bitmap = tempBitmap?.copy(Bitmap.Config.ARGB_8888, true)
             }
         }
 
-    /* ---------- Camera ---------- */
+    /* ---------------- CAMERA ---------------- */
 
     val cameraLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.TakePicturePreview()
-        ) { capturedBitmap ->
-            bitmap = capturedBitmap
-            imageUri = null
+        rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { capturedBitmap ->
+
+            capturedBitmap?.let {
+                // 🔥 FIX: Convert to ARGB_8888
+                bitmap = it.copy(Bitmap.Config.ARGB_8888, true)
+            }
         }
 
     Column(
@@ -89,7 +81,7 @@ fun HomeScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            /* ---------- Top Section ---------- */
+            /* ---------------- TOP BAR ---------------- */
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -137,7 +129,7 @@ fun HomeScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            /* ---------- Image Preview ---------- */
+            /* ---------------- IMAGE PREVIEW ---------------- */
 
             Card(
                 modifier = Modifier
@@ -151,16 +143,16 @@ fun HomeScreen(navController: NavController) {
                     modifier = Modifier.fillMaxSize()
                 ) {
 
-                    bitmap?.let {
+                    if (bitmap != null) {
 
                         Image(
-                            bitmap = it.asImageBitmap(),
+                            bitmap = bitmap!!.asImageBitmap(),
                             contentDescription = "Leaf",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
 
-                    } ?: run {
+                    } else {
 
                         val composition by rememberLottieComposition(
                             LottieCompositionSpec.RawRes(R.raw.plant)
@@ -177,7 +169,7 @@ fun HomeScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(30.dp))
 
-            /* ---------- Buttons ---------- */
+            /* ---------------- BUTTONS ---------------- */
 
             Button(
                 onClick = { galleryLauncher.launch("image/*") },
@@ -206,20 +198,22 @@ fun HomeScreen(navController: NavController) {
             Button(
                 onClick = {
 
-                    bitmap?.let {
+                    if (bitmap == null) {
+                        resultText = "Please select image first"
+                        return@Button
+                    }
 
-                        try {
-                            val prediction =
-                                classifier.classify(it, labels)
-                                    .replace("_", " ")
-                                    .replaceFirstChar { c -> c.uppercase() }
+                    try {
+                        val prediction =
+                            classifier.classify(bitmap!!, labels)
+                                .replace("_", " ")
+                                .replaceFirstChar { it.uppercase() }
 
-                            resultText = "Detected: $prediction"
+                        resultText = "Detected: $prediction"
 
-                        } catch (e: Exception) {
-                            resultText = "Prediction error"
-                            e.printStackTrace()
-                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        resultText = "Prediction error"
                     }
                 },
                 modifier = Modifier
@@ -233,7 +227,6 @@ fun HomeScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(15.dp))
 
             if (resultText.isNotEmpty()) {
-
                 Text(
                     text = resultText,
                     style = MaterialTheme.typography.titleMedium
@@ -241,7 +234,7 @@ fun HomeScreen(navController: NavController) {
             }
         }
 
-        /* ---------- Bottom ---------- */
+        /* ---------------- BOTTOM BUTTON ---------------- */
 
         OutlinedButton(
             onClick = { },
