@@ -2,83 +2,98 @@ package com.example.agriplus.ml
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Color
 import org.tensorflow.lite.Interpreter
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
 
-class LeafClassifier(context: Context) {
+class LeafClassifier(private val context: Context) {
 
-    private val interpreter: Interpreter
-    private val imageSize = 300   // 🔥 FIXED (was 224)
+    private var interpreter: Interpreter
 
     init {
-        interpreter = Interpreter(loadModelFile(context))
+        interpreter = Interpreter(loadModelFile())
     }
 
-    private fun loadModelFile(context: Context): ByteBuffer {
-
+    /* ---------- LOAD MODEL ---------- */
+    private fun loadModelFile(): ByteBuffer {
         val fileDescriptor = context.assets.openFd("model.tflite")
         val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
         val fileChannel = inputStream.channel
+        val startOffset = fileDescriptor.startOffset
+        val declaredLength = fileDescriptor.declaredLength
 
         return fileChannel.map(
             FileChannel.MapMode.READ_ONLY,
-            fileDescriptor.startOffset,
-            fileDescriptor.declaredLength
+            startOffset,
+            declaredLength
         )
     }
 
+    /* ---------- LOAD LABELS ---------- */
     fun loadLabels(context: Context): List<String> {
         return context.assets.open("labels.txt")
             .bufferedReader()
             .readLines()
     }
 
-    fun classify(bitmap: Bitmap, labels: List<String>): String {
+    /* ---------- CLASSIFY ---------- */
+    fun classify(bitmap: Bitmap, labels: List<String>): Pair<String, Float> {
 
-        // 🔥 Resize to correct size (300x300)
-        val resized = Bitmap.createScaledBitmap(bitmap, imageSize, imageSize, true)
+        val inputSize = 300   // 🔥 FIXED (matches your model)
+
+        val resizedBitmap =
+            Bitmap.createScaledBitmap(bitmap, inputSize, inputSize, true)
 
         val byteBuffer =
-            ByteBuffer.allocateDirect(4 * imageSize * imageSize * 3)
+            ByteBuffer.allocateDirect(4 * inputSize * inputSize * 3)
         byteBuffer.order(ByteOrder.nativeOrder())
 
-        val pixels = IntArray(imageSize * imageSize)
-        resized.getPixels(pixels, 0, imageSize, 0, 0, imageSize, imageSize)
+        val intValues = IntArray(inputSize * inputSize)
+        resizedBitmap.getPixels(
+            intValues,
+            0,
+            inputSize,
+            0,
+            0,
+            inputSize,
+            inputSize
+        )
 
-        var index = 0
+        var pixelIndex = 0
 
-        for (pixel in pixels) {
+        for (i in 0 until inputSize) {
+            for (j in 0 until inputSize) {
 
-            // 🔥 Azure style (0–255 float, no normalization)
-            val r = (pixel shr 16 and 0xFF).toFloat()
-            val g = (pixel shr 8 and 0xFF).toFloat()
-            val b = (pixel and 0xFF).toFloat()
+                val pixelValue = intValues[pixelIndex++]
 
-            byteBuffer.putFloat(r)
-            byteBuffer.putFloat(g)
-            byteBuffer.putFloat(b)
+                val r = (pixelValue shr 16 and 0xFF) / 255f
+                val g = (pixelValue shr 8 and 0xFF) / 255f
+                val b = (pixelValue and 0xFF) / 255f
 
-            index++
+                byteBuffer.putFloat(r)
+                byteBuffer.putFloat(g)
+                byteBuffer.putFloat(b)
+            }
         }
 
         val output = Array(1) { FloatArray(labels.size) }
 
         interpreter.run(byteBuffer, output)
 
-        var maxIndex = 0
-        var maxValue = output[0][0]
+        val confidences = output[0]
 
-        for (i in output[0].indices) {
-            if (output[0][i] > maxValue) {
-                maxValue = output[0][i]
+        var maxIndex = 0
+        var maxConfidence = confidences[0]
+
+        for (i in confidences.indices) {
+            if (confidences[i] > maxConfidence) {
+                maxConfidence = confidences[i]
                 maxIndex = i
             }
         }
 
-        return labels.getOrElse(maxIndex) { "Unknown" }
+        return Pair(labels[maxIndex], maxConfidence)
     }
 }

@@ -72,10 +72,14 @@ dependencies {
 
     implementation("com.google.android.gms:play-services-auth:20.7.0")
 
-    implementation("com.google.firebase:firebase-auth-ktx:22.3.0")
+
 
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
 
 }

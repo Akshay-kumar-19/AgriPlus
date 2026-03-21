@@ -7,6 +7,7 @@ import androidx.navigation.compose.*
 import com.example.agriplus.screens.HomeScreen
 import com.example.agriplus.screens.LoginScreen
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.example.agriplus.screens.HistoryScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -33,6 +34,9 @@ class MainActivity : ComponentActivity() {
 
                 composable("home") {
                     HomeScreen(navController)
+                }
+                composable("history") {
+                    HistoryScreen()
                 }
             }
         }
