@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "755651884615",
+    "project_id": "agriplus-7e7eb",
+    "storage_bucket": "agriplus-7e7eb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:755651884615:android:60c735e491bf1b3bd6e362",
+        "android_client_info": {
+          "package_name": "com.example.agriplus"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "755651884615-8r3estv9s7buqlj0lajduhoeb4phad5d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.agriplus",
+            "certificate_hash": "8bae6079af2601a248fdb4b9b2a59ca0be4a8784"
+          }
+        },
+        {
+          "client_id": "755651884615-m1kt81i7bc4vikocbc58rvojkgqkcme4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-5LAcEwxd-tj6EhMspoDgImbp259ENUc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "755651884615-m1kt81i7bc4vikocbc58rvojkgqkcme4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
