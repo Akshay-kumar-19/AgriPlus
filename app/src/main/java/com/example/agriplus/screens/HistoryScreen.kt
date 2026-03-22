@@ -1,30 +1,29 @@
 package com.example.agriplus.screens
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil.compose.rememberAsyncImagePainter
-import com.example.agriplus.data.HistoryItem
-import com.example.agriplus.data.RealtimeManager
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.unit.*
+import androidx.compose.ui.text.font.FontWeight
+import coil.compose.AsyncImage
+import com.example.agriplus.data.*
 import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
 import java.util.*
@@ -37,15 +36,23 @@ fun HistoryScreen() {
     var list by remember { mutableStateOf<List<HistoryItem>>(emptyList()) }
 
     val user = FirebaseAuth.getInstance().currentUser
-    val profilePhoto = user?.photoUrl
-    val username = user?.displayName ?: "Farmer"
 
     LaunchedEffect(Unit) {
-        manager.getResults { data ->
-            list = data.sortedByDescending { it.timestamp }
+        manager.getResults {
+            list = it.sortedByDescending { item -> item.timestamp }
         }
     }
 
+    fun base64ToBitmap(base64: String): Bitmap? {
+        return try {
+            val bytes = Base64.decode(base64, Base64.DEFAULT)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // 🔥 GRADIENT BACKGROUND (SAME AS HOME)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -62,61 +69,64 @@ fun HistoryScreen() {
                 .padding(16.dp)
         ) {
 
-            // 🔥 HEADER
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // 🔥 HEADER (PROFILE + NAME)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
 
-                if (profilePhoto != null) {
-                    Image(
-                        painter = rememberAsyncImagePainter(profilePhoto),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(50.dp)
-                            .clip(CircleShape)
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(50.dp)
-                            .clip(CircleShape)
-                            .background(Color.White),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Person, null)
-                    }
-                }
+                AsyncImage(
+                    model = user?.photoUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape)
+                )
 
                 Spacer(modifier = Modifier.width(10.dp))
 
-                Text(
-                    text = username,
-                    color = Color.White,
-                    fontSize = 20.sp
-                )
+                Column {
+                    Text("History", color = Color.LightGray, fontSize = 12.sp)
+
+                    Text(
+                        text = user?.displayName ?: "User",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 🔥 LIST (NO SWIPE NOW)
             LazyColumn(modifier = Modifier.weight(1f)) {
 
                 itemsIndexed(list, key = { _, item -> item.timestamp }) { index, item ->
 
                     var expanded by remember { mutableStateOf(false) }
+                    val rotation by animateFloatAsState(if (expanded) 180f else 0f)
 
-                    val rotation by animateFloatAsState(
-                        targetValue = if (expanded) 180f else 0f
-                    )
+                    val info = DiseaseRepository.getInfo(item.result)
 
                     val date = SimpleDateFormat(
                         "dd MMM yyyy • hh:mm a",
                         Locale.getDefault()
                     ).format(Date(item.timestamp))
 
+                    val isHealthy = item.result.contains("healthy", true)
+
+                    // 🔥 PREMIUM CARD
                     Card(
-                        shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp)
+                            .padding(vertical = 8.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isHealthy)
+                                Color(0xFF1B5E20)
+                            else
+                                Color(0xFF1E1E1E)
+                        )
                     ) {
 
                         Column(modifier = Modifier.padding(14.dp)) {
@@ -124,41 +134,43 @@ fun HistoryScreen() {
                             // 🔹 TOP ROW
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
 
                                 Column {
 
                                     Text(
-                                        text = item.result.replace("_", " "),
-                                        style = MaterialTheme.typography.titleMedium
+                                        text = info.name,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
                                     )
 
                                     Text(
                                         text = date,
                                         fontSize = 12.sp,
-                                        color = Color.Gray
+                                        color = Color.LightGray
                                     )
                                 }
 
                                 Row {
 
-                                    // 🔥 DELETE BUTTON
                                     IconButton(onClick = {
                                         manager.deleteItem(item)
-                                        list = list.toMutableList().apply { removeAt(index) }
+                                        list = list.toMutableList().apply {
+                                            removeAt(index)
+                                        }
                                     }) {
-                                        Icon(Icons.Default.Delete, null)
+                                        Icon(Icons.Default.Delete, null, tint = Color.White)
                                     }
 
-                                    // 🔥 EXPAND BUTTON
                                     IconButton(onClick = {
                                         expanded = !expanded
                                     }) {
                                         Icon(
                                             Icons.Default.ExpandMore,
                                             null,
+                                            tint = Color.White,
                                             modifier = Modifier.rotate(rotation)
                                         )
                                     }
@@ -167,21 +179,25 @@ fun HistoryScreen() {
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // 🔥 CONFIDENCE BAR
+                            // 🔥 PROGRESS BAR
                             LinearProgressIndicator(
-                                progress = item.confidence.toFloat(),
+                                progress = { item.confidence.toFloat() },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(6.dp),
-                                color = Color(0xFF4CAF50)
+                                color = Color.Green,
+                                trackColor = Color.Gray
                             )
+
+                            Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
                                 text = "Confidence ${(item.confidence * 100).toInt()}%",
+                                color = Color.White,
                                 fontSize = 12.sp
                             )
 
-                            // 🔥 EXPAND CONTENT
+                            // 🔥 EXPAND SECTION
                             AnimatedVisibility(
                                 visible = expanded,
                                 enter = fadeIn() + expandVertically(),
@@ -190,17 +206,35 @@ fun HistoryScreen() {
 
                                 Column {
 
-                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Spacer(modifier = Modifier.height(12.dp))
 
-                                    if (item.imageUri.isNotEmpty()) {
+                                    // 📸 IMAGE
+                                    val bmp = base64ToBitmap(item.imageBase64)
+
+                                    bmp?.let {
                                         Image(
-                                            painter = rememberAsyncImagePainter(item.imageUri),
+                                            bitmap = it.asImageBitmap(),
                                             contentDescription = null,
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .height(180.dp)
                                         )
                                     }
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    Text("Cause:", color = Color.White, fontWeight = FontWeight.Bold)
+                                    Text(info.cause, color = Color.White)
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Text("Symptoms:", color = Color.White, fontWeight = FontWeight.Bold)
+                                    Text(info.symptoms, color = Color.White)
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Text("Treatment:", color = Color.White, fontWeight = FontWeight.Bold)
+                                    Text(info.treatment, color = Color.White)
                                 }
                             }
                         }
@@ -208,14 +242,14 @@ fun HistoryScreen() {
                 }
             }
 
-            // 🔥 CLEAR ALL
+            // 🔥 CLEAR BUTTON (BOTTOM)
             Button(
                 onClick = {
                     manager.clearAll()
                     list = emptyList()
                 },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(50)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Clear All History")
             }

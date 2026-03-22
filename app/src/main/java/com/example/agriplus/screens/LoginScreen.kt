@@ -35,7 +35,7 @@ fun LoginScreen(navController: NavController) {
     val auth = FirebaseAuth.getInstance()
 
     // 🔥 Lottie animation
-    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.plant))
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.gplant))
     val progress by animateLottieCompositionAsState(composition, iterations = LottieConstants.IterateForever)
 
     // 🔥 Google Sign-In
