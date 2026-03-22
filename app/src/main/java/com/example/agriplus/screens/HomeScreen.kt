@@ -1,106 +1,89 @@
 package com.example.agriplus.screens
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImage
 import com.airbnb.lottie.compose.*
 import com.example.agriplus.R
-import com.example.agriplus.ml.LeafClassifier
-import com.example.agriplus.data.FirebaseHistoryManager
-import com.example.agriplus.data.HistoryItem
-import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.example.agriplus.utils.ApiClient
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.launch
-import java.io.InputStream
+import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 
 @Composable
 fun HomeScreen(navController: NavController) {
 
     val context = LocalContext.current
-
-    val classifier = remember { LeafClassifier(context) }
-    val labels = remember { classifier.loadLabels(context) }
-
-    val historyManager = remember { FirebaseHistoryManager() }
-    val scope = rememberCoroutineScope()
-
-    val account = GoogleSignIn.getLastSignedInAccount(context)
-
-    val username = account?.displayName ?: "User"
-    val profileImage = account?.photoUrl
+    val auth = FirebaseAuth.getInstance()
+    val user = auth.currentUser
 
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var resultText by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
+    var confidence by remember { mutableStateOf(0.0) }
+    var isScanning by remember { mutableStateOf(false) }
 
-    /* ---------- SAFE BITMAP CONVERTER ---------- */
-    fun getSafeBitmap(uri: Uri): Bitmap? {
-        return try {
-            val inputStream: InputStream? =
-                context.contentResolver.openInputStream(uri)
-            BitmapFactory.decodeStream(inputStream)
-        } catch (e: Exception) {
-            null
-        }
-    }
+    // 🔥 TWO DIFFERENT LOTTIES
+    val plantAnim by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.plant))
+    val scanAnim by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.scan))
 
-    /* ---------- Gallery ---------- */
+    val plantProgress by animateLottieCompositionAsState(plantAnim, iterations = LottieConstants.IterateForever)
+    val scanProgress by animateLottieCompositionAsState(scanAnim, iterations = LottieConstants.IterateForever)
+
     val galleryLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.GetContent()
-        ) { uri ->
-
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             imageUri = uri
             uri?.let {
-                bitmap = getSafeBitmap(it)
+                bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, it)
             }
         }
 
-    /* ---------- Camera ---------- */
     val cameraLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.TakePicturePreview()
-        ) { capturedBitmap ->
-
-            bitmap = capturedBitmap
-            imageUri = null
+        rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) {
+            bitmap = it
         }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
-            .background(Color(0xFFF6F6F6))
-            .padding(20.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFF0F2027), Color(0xFF2C5364))
+                )
+            )
     ) {
 
-        Column {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp)
+        ) {
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            /* ---------- TOP BAR ---------- */
+            // 🔥 HEADER
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -109,169 +92,175 @@ fun HomeScreen(navController: NavController) {
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
 
-                    Image(
-                        painter = rememberAsyncImagePainter(profileImage),
-                        contentDescription = "Profile",
+                    AsyncImage(
+                        model = user?.photoUrl,
+                        contentDescription = null,
                         modifier = Modifier
-                            .size(45.dp)
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
+                            .size(50.dp)
+                            .clip(CircleShape)
                     )
 
                     Spacer(modifier = Modifier.width(10.dp))
 
-                    Text(
-                        text = "Welcome, $username 👋",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
+                    Column {
+                        Text("Welcome 👋", color = Color.LightGray, fontSize = 12.sp)
 
-                Button(
-                    onClick = {
-                        FirebaseAuth.getInstance().signOut()
-
-                        GoogleSignIn.getClient(
-                            context,
-                            com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
-                        ).signOut()
-
-                        navController.navigate("login") {
-                            popUpTo("home") { inclusive = true }
-                        }
-                    },
-                    shape = RoundedCornerShape(50)
-                ) {
-                    Text("Logout")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            /* ---------- IMAGE PREVIEW ---------- */
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(260.dp),
-                shape = RoundedCornerShape(20.dp)
-            ) {
-
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-
-                    if (bitmap != null) {
-
-                        Image(
-                            bitmap = bitmap!!.asImageBitmap(),
-                            contentDescription = "Leaf",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-
-                    } else {
-
-                        val comp by rememberLottieComposition(
-                            LottieCompositionSpec.RawRes(R.raw.plant)
-                        )
-
-                        LottieAnimation(
-                            composition = comp,
-                            iterations = LottieConstants.IterateForever,
-                            modifier = Modifier.size(180.dp)
+                        Text(
+                            text = user?.displayName ?: "User",
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
+                }
+
+                IconButton(onClick = {
+                    auth.signOut()
+                    navController.navigate("login")
+                }) {
+                    Icon(Icons.Default.ExitToApp, null, tint = Color.White)
                 }
             }
 
             Spacer(modifier = Modifier.height(25.dp))
 
-            /* ---------- BUTTONS ---------- */
-
-            Button(
-                onClick = { galleryLauncher.launch("image/*") },
-                modifier = Modifier.fillMaxWidth().height(55.dp),
-                shape = RoundedCornerShape(50)
+            // 🔥 IMAGE BANNER
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(260.dp)
+                    .shadow(10.dp, RoundedCornerShape(20.dp)),
+                shape = RoundedCornerShape(20.dp)
             ) {
-                Text("Upload from Gallery")
-            }
+                Box(contentAlignment = Alignment.Center) {
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = { cameraLauncher.launch(null) },
-                modifier = Modifier.fillMaxWidth().height(55.dp),
-                shape = RoundedCornerShape(50)
-            ) {
-                Text("Take Photo")
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = {
-
-                    bitmap?.let {
-
-                        isLoading = true
-
-                        val (prediction, conf) =
-                            classifier.classify(it, labels)
-
-                        val formatted =
-                            prediction.replace("_", " ")
-                                .replaceFirstChar { c -> c.uppercase() }
-
-                        resultText =
-                            "Detected: $formatted (${(conf * 100).toInt()}%)"
-
-                        scope.launch {
-                            historyManager.saveResult(
-                                HistoryItem(
-                                    result = formatted,
-                                    confidence = conf,
-                                    imageUri = imageUri?.toString() ?: ""
-                                )
-                            )
-                        }
-
-                        isLoading = false
+                    if (imageUri != null) {
+                        AsyncImage(
+                            model = imageUri,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        // ✅ BIG CENTERED PLANT
+                        LottieAnimation(
+                            composition = plantAnim,
+                            progress = { plantProgress },
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(30.dp)
+                        )
                     }
-
-                },
-                modifier = Modifier.fillMaxWidth().height(55.dp),
-                shape = RoundedCornerShape(50)
-            ) {
-                Text("Scan Leaf")
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            /* ---------- LOADING ---------- */
-            if (isLoading) {
-                CircularProgressIndicator()
+            // 🔥 BUTTONS
+            Button(
+                onClick = { galleryLauncher.launch("image/*") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Upload Image")
             }
 
-            /* ---------- RESULT ---------- */
-            if (resultText.isNotEmpty()) {
-                Text(
-                    text = resultText,
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-        }
+            Spacer(modifier = Modifier.height(10.dp))
 
-        /* ---------- BOTTOM ---------- */
-        OutlinedButton(
-            onClick = {
-                navController.navigate("history")
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp),
-            shape = RoundedCornerShape(50)
-        ) {
-            Text("View History")
+            Button(
+                onClick = { cameraLauncher.launch(null) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.CameraAlt, null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Take Photo")
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Button(
+                onClick = {
+
+                    bitmap?.let { bmp ->
+
+                        isScanning = true
+                        resultText = ""
+
+                        val stream = ByteArrayOutputStream()
+                        bmp.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+                        val byteArray = stream.toByteArray()
+
+                        ApiClient.uploadImage(byteArray) { response ->
+
+                            isScanning = false
+
+                            try {
+                                val obj = JSONObject(response)
+                                    .getJSONArray("predictions")
+                                    .getJSONObject(0)
+
+                                resultText = obj.getString("class")
+                                confidence = obj.getDouble("confidence")
+
+                            } catch (e: Exception) {
+                                resultText = "Error"
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Scan Leaf")
+            }
+
+            // 🔥 SCAN ANIMATION (BOTTOM) ✅ FIXED
+            AnimatedVisibility(visible = isScanning) {
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    LottieAnimation(
+                        composition = scanAnim, // ✅ NOW SCAN, NOT PLANT
+                        progress = { scanProgress },
+                        modifier = Modifier.size(120.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(15.dp))
+
+            // RESULT (same)
+            AnimatedVisibility(visible = resultText.isNotEmpty()) {
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+
+                        Text(
+                            text = resultText.replace("_", " "),
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text("Confidence: ${(confidence * 100).toInt()}%")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Button(
+                onClick = { navController.navigate("history") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("View History")
+            }
         }
     }
 }

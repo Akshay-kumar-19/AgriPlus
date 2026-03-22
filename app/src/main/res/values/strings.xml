@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">AgriPlus</string>
+
+    <string name="default_web_client_id">
+        979312686955-9eqcqj914desobhd6e9l6r4osjmnpfdd.apps.googleusercontent.com
+    </string>
 </resources>
