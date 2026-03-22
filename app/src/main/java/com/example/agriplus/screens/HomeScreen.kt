@@ -78,7 +78,13 @@ fun HomeScreen(navController: NavController) {
         val bytes = stream.toByteArray()
         return Base64.encodeToString(bytes, Base64.DEFAULT)
     }
-
+    if (user == null) {
+        LaunchedEffect(Unit) {
+            navController.navigate("login") {
+                popUpTo(0)
+            }
+        }
+    }
     // 🎨 BACKGROUND
     Box(
         modifier = Modifier
@@ -94,6 +100,7 @@ fun HomeScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(20.dp)
+                .navigationBarsPadding()
         ) {
 
             // 🔥 HEADER
@@ -129,7 +136,11 @@ fun HomeScreen(navController: NavController) {
 
                 IconButton(onClick = {
                     auth.signOut()
-                    navController.navigate("login")
+                    navController.navigate("login") {
+                        popUpTo(navController.graph.startDestinationId) {
+                            inclusive = true
+                        }
+                    }
                 }) {
                     Icon(Icons.Default.ExitToApp, null, tint = Color.White)
                 }
