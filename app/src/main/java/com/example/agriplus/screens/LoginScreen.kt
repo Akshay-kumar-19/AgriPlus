@@ -69,7 +69,10 @@ fun LoginScreen(navController: NavController) {
                             Toast.makeText(context, "Welcome!", Toast.LENGTH_SHORT).show()
 
                             navController.navigate("home") {
-                                popUpTo("login") { inclusive = true }
+                                popUpTo("login") {
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
                             }
 
                         } else {

@@ -137,9 +137,10 @@ fun HomeScreen(navController: NavController) {
                 IconButton(onClick = {
                     auth.signOut()
                     navController.navigate("login") {
-                        popUpTo(navController.graph.startDestinationId) {
+                        popUpTo(0) {
                             inclusive = true
                         }
+                        launchSingleTop = true
                     }
                 }) {
                     Icon(Icons.Default.ExitToApp, null, tint = Color.White)
