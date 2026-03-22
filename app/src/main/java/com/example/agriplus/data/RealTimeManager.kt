@@ -1,80 +1,55 @@
 package com.example.agriplus.data
 
-import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 
 class RealtimeManager {
 
-    private val userId = FirebaseAuth.getInstance().currentUser?.uid
-    private val dbRef = FirebaseDatabase.getInstance().reference
+    private val db = FirebaseDatabase.getInstance().reference
 
-    fun saveResult(item: HistoryItem) {
-        if (userId == null) {
-            Log.d("FIREBASE", "User is NULL ❌")
-            return
-        }
-
-        dbRef.child("users")
-            .child(userId)
-            .child("history")
-            .push()
-            .setValue(item)
-            .addOnSuccessListener {
-                Log.d("FIREBASE", "Data Saved ✅")
-            }
-            .addOnFailureListener {
-                Log.d("FIREBASE", "Save Failed ❌")
-            }
+    private fun getUserRef(): DatabaseReference {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "guest"
+        return db.child("users").child(userId).child("history")
     }
 
+    // 🔥 SAVE RESULT
+    fun saveResult(item: HistoryItem) {
+        val ref = getUserRef().push()
+        ref.setValue(item)
+    }
+
+    // 🔥 GET RESULTS
     fun getResults(callback: (List<HistoryItem>) -> Unit) {
-        if (userId == null) return
+        getUserRef().addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val list = mutableListOf<HistoryItem>()
 
-        dbRef.child("users")
-            .child(userId)
-            .child("history")
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val list = mutableListOf<HistoryItem>()
-
-                    for (data in snapshot.children) {
-                        val item = data.getValue(HistoryItem::class.java)
-                        item?.let { list.add(it) }
-                    }
-
-                    callback(list.reversed())
+                for (data in snapshot.children) {
+                    val item = data.getValue(HistoryItem::class.java)
+                    item?.let { list.add(it) }
                 }
 
-                override fun onCancelled(error: DatabaseError) {}
-            })
+                callback(list)
+            }
+
+            override fun onCancelled(error: DatabaseError) {}
+        })
     }
 
-    fun clearAll() {
-        if (userId == null) return
-
-        dbRef.child("users")
-            .child(userId)
-            .child("history")
-            .removeValue()
-    }
+    // 🔥 DELETE ONE
     fun deleteItem(item: HistoryItem) {
-
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-
-        val ref = FirebaseDatabase.getInstance()
-            .getReference("users")
-            .child(userId)
-            .child("history")
-
-        ref.orderByChild("timestamp")
-            .equalTo(item.timestamp.toDouble())
-            .get()
-            .addOnSuccessListener { snapshot ->
-
-                for (child in snapshot.children) {
+        getUserRef().get().addOnSuccessListener { snapshot ->
+            for (child in snapshot.children) {
+                val data = child.getValue(HistoryItem::class.java)
+                if (data?.timestamp == item.timestamp) {
                     child.ref.removeValue()
                 }
             }
+        }
+    }
+
+    // 🔥 CLEAR ALL
+    fun clearAll() {
+        getUserRef().removeValue()
     }
 }

@@ -18,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +28,8 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.airbnb.lottie.compose.*
 import com.example.agriplus.R
+import com.example.agriplus.data.HistoryItem
+import com.example.agriplus.data.RealtimeManager
 import com.example.agriplus.utils.ApiClient
 import com.google.firebase.auth.FirebaseAuth
 import org.json.JSONObject
@@ -41,19 +42,22 @@ fun HomeScreen(navController: NavController) {
     val auth = FirebaseAuth.getInstance()
     val user = auth.currentUser
 
+    val manager = remember { RealtimeManager() }
+
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var resultText by remember { mutableStateOf("") }
     var confidence by remember { mutableStateOf(0.0) }
     var isScanning by remember { mutableStateOf(false) }
 
-    // 🔥 TWO DIFFERENT LOTTIES
+    // 🔥 LOTTIES
     val plantAnim by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.plant))
     val scanAnim by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.scan))
 
     val plantProgress by animateLottieCompositionAsState(plantAnim, iterations = LottieConstants.IterateForever)
     val scanProgress by animateLottieCompositionAsState(scanAnim, iterations = LottieConstants.IterateForever)
 
+    // 📸 GALLERY
     val galleryLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             imageUri = uri
@@ -62,6 +66,7 @@ fun HomeScreen(navController: NavController) {
             }
         }
 
+    // 📷 CAMERA
     val cameraLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) {
             bitmap = it
@@ -124,12 +129,11 @@ fun HomeScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(25.dp))
 
-            // 🔥 IMAGE BANNER
+            // 🔥 IMAGE / LOTTIE
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(260.dp)
-                    .shadow(10.dp, RoundedCornerShape(20.dp)),
+                    .height(260.dp),
                 shape = RoundedCornerShape(20.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -141,7 +145,7 @@ fun HomeScreen(navController: NavController) {
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        // ✅ BIG CENTERED PLANT
+                        // 🌱 BIG CENTER PLANT
                         LottieAnimation(
                             composition = plantAnim,
                             progress = { plantProgress },
@@ -178,6 +182,7 @@ fun HomeScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            // 🔥 SCAN BUTTON (FIXED WITH SAVE)
             Button(
                 onClick = {
 
@@ -199,8 +204,21 @@ fun HomeScreen(navController: NavController) {
                                     .getJSONArray("predictions")
                                     .getJSONObject(0)
 
-                                resultText = obj.getString("class")
-                                confidence = obj.getDouble("confidence")
+                                val label = obj.getString("class")
+                                val conf = obj.getDouble("confidence")
+
+                                resultText = label
+                                confidence = conf
+
+                                // ✅🔥 SAVE HISTORY (THIS WAS MISSING)
+                                manager.saveResult(
+                                    HistoryItem(
+                                        result = label,
+                                        confidence = conf,
+                                        imageUri = imageUri?.toString() ?: "",
+                                        timestamp = System.currentTimeMillis()
+                                    )
+                                )
 
                             } catch (e: Exception) {
                                 resultText = "Error"
@@ -214,9 +232,8 @@ fun HomeScreen(navController: NavController) {
                 Text("Scan Leaf")
             }
 
-            // 🔥 SCAN ANIMATION (BOTTOM) ✅ FIXED
+            // 🔍 SCAN LOTTIE (BOTTOM)
             AnimatedVisibility(visible = isScanning) {
-
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -224,7 +241,7 @@ fun HomeScreen(navController: NavController) {
                     Spacer(modifier = Modifier.height(10.dp))
 
                     LottieAnimation(
-                        composition = scanAnim, // ✅ NOW SCAN, NOT PLANT
+                        composition = scanAnim,
                         progress = { scanProgress },
                         modifier = Modifier.size(120.dp)
                     )
@@ -233,7 +250,7 @@ fun HomeScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(15.dp))
 
-            // RESULT (same)
+            // 🔥 RESULT
             AnimatedVisibility(visible = resultText.isNotEmpty()) {
 
                 Card(

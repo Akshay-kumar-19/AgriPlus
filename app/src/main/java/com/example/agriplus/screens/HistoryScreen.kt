@@ -4,13 +4,13 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
@@ -20,7 +20,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
@@ -42,8 +41,8 @@ fun HistoryScreen() {
     val username = user?.displayName ?: "Farmer"
 
     LaunchedEffect(Unit) {
-        manager.getResults {
-            list = it
+        manager.getResults { data ->
+            list = data.sortedByDescending { it.timestamp }
         }
     }
 
@@ -63,7 +62,7 @@ fun HistoryScreen() {
                 .padding(16.dp)
         ) {
 
-            // 🔥 PROFILE HEADER
+            // 🔥 HEADER
             Row(verticalAlignment = Alignment.CenterVertically) {
 
                 if (profilePhoto != null) {
@@ -71,18 +70,18 @@ fun HistoryScreen() {
                         painter = rememberAsyncImagePainter(profilePhoto),
                         contentDescription = null,
                         modifier = Modifier
-                            .size(45.dp)
+                            .size(50.dp)
                             .clip(CircleShape)
                     )
                 } else {
                     Box(
                         modifier = Modifier
-                            .size(45.dp)
+                            .size(50.dp)
                             .clip(CircleShape)
                             .background(Color.White),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Person, contentDescription = null)
+                        Icon(Icons.Default.Person, null)
                     }
                 }
 
@@ -91,125 +90,116 @@ fun HistoryScreen() {
                 Text(
                     text = username,
                     color = Color.White,
-                    fontSize = 18.sp
+                    fontSize = 20.sp
                 )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 🔥 HISTORY LIST
-            LazyColumn(
-                modifier = Modifier.weight(1f)
-            ) {
+            // 🔥 LIST (NO SWIPE NOW)
+            LazyColumn(modifier = Modifier.weight(1f)) {
 
                 itemsIndexed(list, key = { _, item -> item.timestamp }) { index, item ->
 
                     var expanded by remember { mutableStateOf(false) }
-                    var offsetX by remember { mutableStateOf(0f) }
 
                     val rotation by animateFloatAsState(
                         targetValue = if (expanded) 180f else 0f
                     )
 
                     val date = SimpleDateFormat(
-                        "dd MMM yyyy, hh:mm a",
+                        "dd MMM yyyy • hh:mm a",
                         Locale.getDefault()
                     ).format(Date(item.timestamp))
 
-                    Box(
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp)
-                            .offset(x = offsetX.dp)
-                            .pointerInput(Unit) {
-                                detectHorizontalDragGestures { _, dragAmount ->
-                                    offsetX += dragAmount / 10
-
-                                    // 👉 SWIPE TO DELETE
-                                    if (offsetX < -120) {
-                                        manager.deleteItem(item)
-                                        list = list.toMutableList().apply { removeAt(index) }
-                                    }
-                                }
-                            }
                     ) {
 
-                        Card(
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
 
-                            Column(modifier = Modifier.padding(14.dp)) {
+                            // 🔹 TOP ROW
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
 
-                                // 🔹 HEADER
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                                Column {
 
-                                    Column {
+                                    Text(
+                                        text = item.result.replace("_", " "),
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
 
-                                        Text(
-                                            text = item.result,
-                                            style = MaterialTheme.typography.titleMedium
-                                        )
+                                    Text(
+                                        text = date,
+                                        fontSize = 12.sp,
+                                        color = Color.Gray
+                                    )
+                                }
 
-                                        Text(
-                                            text = date,
-                                            fontSize = 12.sp,
-                                            color = Color.Gray
-                                        )
+                                Row {
+
+                                    // 🔥 DELETE BUTTON
+                                    IconButton(onClick = {
+                                        manager.deleteItem(item)
+                                        list = list.toMutableList().apply { removeAt(index) }
+                                    }) {
+                                        Icon(Icons.Default.Delete, null)
                                     }
 
+                                    // 🔥 EXPAND BUTTON
                                     IconButton(onClick = {
                                         expanded = !expanded
                                     }) {
                                         Icon(
                                             Icons.Default.ExpandMore,
-                                            contentDescription = null,
+                                            null,
                                             modifier = Modifier.rotate(rotation)
                                         )
                                     }
                                 }
+                            }
 
-                                // 🔥 EXPAND ANIMATION
-                                AnimatedVisibility(
-                                    visible = expanded,
-                                    enter = fadeIn() + expandVertically(),
-                                    exit = fadeOut() + shrinkVertically()
-                                ) {
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                                    Column {
+                            // 🔥 CONFIDENCE BAR
+                            LinearProgressIndicator(
+                                progress = item.confidence.toFloat(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp),
+                                color = Color(0xFF4CAF50)
+                            )
 
-                                        Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "Confidence ${(item.confidence * 100).toInt()}%",
+                                fontSize = 12.sp
+                            )
 
-                                        // 🔥 CONFIDENCE BAR
-                                        Text(
-                                            text = "Confidence: ${(item.confidence * 100).toInt()}%",
-                                            fontSize = 14.sp
-                                        )
+                            // 🔥 EXPAND CONTENT
+                            AnimatedVisibility(
+                                visible = expanded,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
 
-                                        LinearProgressIndicator(
-                                            progress = item.confidence.toFloat(),
+                                Column {
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    if (item.imageUri.isNotEmpty()) {
+                                        Image(
+                                            painter = rememberAsyncImagePainter(item.imageUri),
+                                            contentDescription = null,
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .height(6.dp),
-                                            color = Color(0xFF4CAF50)
+                                                .height(180.dp)
                                         )
-
-                                        Spacer(modifier = Modifier.height(10.dp))
-
-                                        // 🔥 IMAGE
-                                        if (item.imageUri.isNotEmpty()) {
-                                            Image(
-                                                painter = rememberAsyncImagePainter(item.imageUri),
-                                                contentDescription = null,
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(160.dp)
-                                            )
-                                        }
                                     }
                                 }
                             }
