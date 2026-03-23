@@ -37,6 +37,8 @@ fun HistoryScreen() {
 
     val user = FirebaseAuth.getInstance().currentUser
 
+    var showDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         manager.getResults {
             list = it.sortedByDescending { item -> item.timestamp }
@@ -52,7 +54,6 @@ fun HistoryScreen() {
         }
     }
 
-    // 🔥 GRADIENT BACKGROUND (SAME AS HOME)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -67,9 +68,10 @@ fun HistoryScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
+                .navigationBarsPadding()   // 🔥 FIX overlap
         ) {
 
-            // 🔥 HEADER (PROFILE + NAME)
+            // 🔥 HEADER
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -99,7 +101,9 @@ fun HistoryScreen() {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            LazyColumn(modifier = Modifier.weight(1f)) {
+            LazyColumn(
+                modifier = Modifier.weight(1f)
+            ) {
 
                 itemsIndexed(list, key = { _, item -> item.timestamp }) { index, item ->
 
@@ -115,7 +119,6 @@ fun HistoryScreen() {
 
                     val isHealthy = item.result.contains("healthy", true)
 
-                    // 🔥 PREMIUM CARD
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -131,7 +134,6 @@ fun HistoryScreen() {
 
                         Column(modifier = Modifier.padding(14.dp)) {
 
-                            // 🔹 TOP ROW
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -179,7 +181,6 @@ fun HistoryScreen() {
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // 🔥 PROGRESS BAR
                             LinearProgressIndicator(
                                 progress = { item.confidence.toFloat() },
                                 modifier = Modifier
@@ -197,7 +198,6 @@ fun HistoryScreen() {
                                 fontSize = 12.sp
                             )
 
-                            // 🔥 EXPAND SECTION
                             AnimatedVisibility(
                                 visible = expanded,
                                 enter = fadeIn() + expandVertically(),
@@ -208,7 +208,6 @@ fun HistoryScreen() {
 
                                     Spacer(modifier = Modifier.height(12.dp))
 
-                                    // 📸 IMAGE
                                     val bmp = base64ToBitmap(item.imageBase64)
 
                                     bmp?.let {
@@ -242,17 +241,39 @@ fun HistoryScreen() {
                 }
             }
 
-            // 🔥 CLEAR BUTTON (BOTTOM)
+            // 🔥 CLEAR BUTTON (SAFE)
             Button(
-                onClick = {
-                    manager.clearAll()
-                    list = emptyList()
-                },
+                onClick = { showDialog = true },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Clear All History")
             }
+        }
+
+        // 🔥 CONFIRMATION DIALOG
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = { showDialog = false },
+                title = { Text("Clear History") },
+                text = { Text("Are you sure you want to delete all history?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        manager.clearAll()
+                        list = emptyList()
+                        showDialog = false
+                    }) {
+                        Text("Yes")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showDialog = false
+                    }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }
