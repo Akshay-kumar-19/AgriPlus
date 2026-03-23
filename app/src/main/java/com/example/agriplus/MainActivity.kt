@@ -6,29 +6,23 @@ import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.compose.*
-import com.example.agriplus.screens.HomeScreen
-import com.example.agriplus.screens.LoginScreen
-import com.example.agriplus.screens.HistoryScreen
-import com.google.firebase.auth.FirebaseAuth
+import com.example.agriplus.screens.*
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 🔥 FULL SCREEN (hide status bar)
+        // 🔥 FULL SCREEN
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val controller = WindowInsetsControllerCompat(window, window.decorView)
-        controller.hide(android.view.WindowInsets.Type.statusBars())
+
+// 🔥 HIDE STATUS BAR (COMPATIBLE)
+        controller.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-
-        // 🔥 CORRECT LOGIN CHECK
-        val user = FirebaseAuth.getInstance().currentUser
-
-        val startDestination =
-            if (user != null) "home" else "login"
 
         setContent {
 
@@ -36,17 +30,25 @@ class MainActivity : ComponentActivity() {
 
             NavHost(
                 navController = navController,
-                startDestination = startDestination
+                startDestination = "splash" // 🔥 START FROM SPLASH
             ) {
 
+                // 🔥 SPLASH SCREEN
+                composable("splash") {
+                    SplashScreen(navController)
+                }
+
+                // 🔥 LOGIN
                 composable("login") {
                     LoginScreen(navController)
                 }
 
+                // 🔥 HOME
                 composable("home") {
                     HomeScreen(navController)
                 }
 
+                // 🔥 HISTORY
                 composable("history") {
                     HistoryScreen()
                 }
