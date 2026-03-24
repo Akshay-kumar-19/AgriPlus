@@ -66,7 +66,7 @@ fun SplashScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(20.dp))
 
             androidx.compose.material3.Text(
-                text = "AgriLeaf AI 🌿",
+                text = "AgriPlus 🌿",
                 color = Color.White
             )
         }
