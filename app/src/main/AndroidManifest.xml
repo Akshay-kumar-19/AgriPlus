@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.agriplus">
-
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
 
     <!-- Optional but safe -->
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
@@ -26,6 +28,22 @@
             </intent-filter>
 
         </activity>
+
+        <!-- FileProvider for Sharing PDF Reports and Images -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.example.agriplus.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- BroadcastReceiver for Treatment Reminders -->
+        <receiver
+            android:name=".utils.ReminderReceiver"
+            android:exported="false" />
 
     </application>
 

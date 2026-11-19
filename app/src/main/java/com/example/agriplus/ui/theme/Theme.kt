@@ -9,18 +9,33 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Blue80,
+    secondary = BlueGrey80,
+    tertiary = Blue80,
+    background = Color(0xFF0F2027),
+    surface = Color(0xFF1B2B34),
+    surfaceVariant = Color(0xFF193A46),
+    outline = Color(0xFF38515D),
+    onSurfaceVariant = Color(0xFFC4CDD7),
+    onBackground = Color(0xFFF7FAFC),
+    onSurface = Color(0xFFF7FAFC)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = Blue40,
+    secondary = BlueGrey40,
+    tertiary = Blue40,
+    background = Color(0xFFEAF4FF),
+    surface = Color.White,
+    surfaceVariant = Color(0xFFF3F9FF),
+    outline = Color(0xFFBDD2E4),
+    onSurfaceVariant = Color(0xFF4B647C),
+    onBackground = Color(0xFF172536),
+    onSurface = Color(0xFF172536),
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -37,7 +52,7 @@ private val LightColorScheme = lightColorScheme(
 fun AgriPlusTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

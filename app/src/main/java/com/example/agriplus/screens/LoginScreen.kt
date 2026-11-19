@@ -1,5 +1,7 @@
 package com.example.agriplus.screens
 
+import com.example.agriplus.ui.theme.AppPalette
+
 import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -92,7 +94,7 @@ fun LoginScreen(navController: NavController) {
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(Color(0xFF0F2027), Color(0xFF2C5364))
+                    listOf(AppPalette.background, AppPalette.surface)
                 )
             )
     ) {
@@ -119,7 +121,7 @@ fun LoginScreen(navController: NavController) {
                 text = "AgriPlus 🌱",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = AppPalette.text
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -128,7 +130,7 @@ fun LoginScreen(navController: NavController) {
             Text(
                 text = "Empowering farmers with smart disease detection",
                 fontSize = 14.sp,
-                color = Color.LightGray
+                color = AppPalette.muted
             )
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -153,14 +155,14 @@ fun LoginScreen(navController: NavController) {
                 Icon(
                     imageVector = Icons.Default.Login,
                     contentDescription = null,
-                    tint = Color.Black
+                    tint = Color(0xFF172536)
                 )
 
                 Spacer(modifier = Modifier.width(10.dp))
 
                 Text(
                     text = "Sign in with Google",
-                    color = Color.Black,
+                    color = Color(0xFF172536),
                     fontSize = 16.sp
                 )
             }

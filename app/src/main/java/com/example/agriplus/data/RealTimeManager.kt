@@ -52,4 +52,8 @@ class RealtimeManager {
     fun clearAll() {
         getUserRef().removeValue()
     }
+
+    fun clearHistory() {
+        clearAll()
+    }
 }

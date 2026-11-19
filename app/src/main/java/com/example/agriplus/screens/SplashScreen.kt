@@ -1,5 +1,7 @@
 package com.example.agriplus.screens
 
+import com.example.agriplus.ui.theme.AppPalette
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
@@ -49,7 +51,7 @@ fun SplashScreen(navController: NavController) {
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(Color(0xFF0F2027), Color(0xFF2C5364))
+                    listOf(AppPalette.background, AppPalette.surface)
                 )
             ),
         contentAlignment = Alignment.Center
@@ -67,7 +69,7 @@ fun SplashScreen(navController: NavController) {
 
             androidx.compose.material3.Text(
                 text = "AgriPlus 🌿",
-                color = Color.White
+                color = AppPalette.text
             )
         }
     }
